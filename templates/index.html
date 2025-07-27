@@ -10,92 +10,113 @@
     <div class="container">
         <h1>箱入り娘パズル</h1>
         
-        <div class="main-layout">
-            <!-- パズルボード（左側） -->
+        <div class="main-content">
+            <!-- 左側: パズルボード -->
             <div class="puzzle-section">
-                <div class="puzzle-header">
-                    <h2>パズルボード</h2>
-                    <button id="reset-board" class="control-btn secondary-btn">盤面リセット</button>
-                </div>
-                
-                <div id="puzzle-board" class="puzzle-board">
-                    <!-- JavaScriptで動的に生成 -->
-                </div>
-                
-                <div class="controls">
-                    <button id="solve-puzzle" class="control-btn primary-btn">探索開始</button>
-                    <button id="stop-puzzle" class="control-btn danger-btn" style="display: none;">中止</button>
-                </div>
-                
-                <!-- 統計情報 -->
-                <div class="statistics">
-                    <div class="stat-item">
-                        <span class="stat-label">経過時間:</span>
-                        <span id="elapsed-time" class="stat-value">0秒</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">探索件数:</span>
-                        <span id="explored-count" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">現在手数:</span>
-                        <span id="current-moves" class="stat-value">0</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-label">推定残り:</span>
-                        <span id="estimated-remaining" class="stat-value">-</span>
+                <h2>パズルボード</h2>
+                <div class="board-container">
+                    <div id="puzzle-board" class="puzzle-board">
+                        <!-- 盤面の各セルをJavaScriptで動的に生成 -->
                     </div>
                 </div>
                 
-                <!-- ステップコントロール -->
-                <div id="step-controls" class="step-controls" style="display: none;">
-                    <button id="prev-step-main" class="step-btn">◀ 前</button>
-                    <span id="step-display" class="step-display">1 / 1</span>
-                    <button id="next-step-main" class="step-btn">次 ▶</button>
+                <!-- ステップコントロールをパズルボードの上に配置 -->
+                <div class="step-controls-main" id="step-controls-main" style="display: none;">
+                    <div class="step-info-main">
+                        <span id="step-counter-main">ステップ: 0 / 0</span>
+                    </div>
+                    <div class="step-buttons-main">
+                        <button id="prev-step-main" class="btn btn-secondary">← 前</button>
+                        <button id="next-step-main" class="btn btn-primary">次 →</button>
+                    </div>
+                    <div id="move-description-main" class="move-description-main"></div>
                 </div>
+                
+                <div id="status-message" class="status-message"></div>
             </div>
             
-            <!-- ピース選択パネル（右側） -->
-            <div class="piece-selection">
-                <h2>ピース選択</h2>
-                <div class="piece-grid">
-                    <!-- 空 -->
-                    <div class="piece-item selected" data-shape="empty" data-name="空">
-                        <div class="piece-preview empty-preview"></div>
-                        <span class="piece-name">空</span>
+            <!-- 右側: ピース選択とコントロール -->
+            <div class="control-section">
+                <!-- ピース選択エリア -->
+                <div class="piece-selection-box">
+                    <div class="piece-header">
+                        <h2>ピース選択</h2>
+                        <button id="reset-board-quick" class="btn btn-secondary btn-small">盤面リセット</button>
                     </div>
-                    
-                    <!-- 箱入り娘（メインピース） -->
-                    <div class="piece-item" data-shape="main" data-name="箱入り娘">
-                        <div class="piece-preview main-preview"></div>
-                        <span class="piece-name">箱入り娘</span>
-                    </div>
-                    
-                    <!-- 横ブロック -->
-                    <div class="piece-item" data-shape="horizontal" data-name="横ブロック">
-                        <div class="piece-preview horizontal-preview"></div>
-                        <span class="piece-name">横ブロック</span>
-                    </div>
-                    
-                    <!-- 縦ブロック -->
-                    <div class="piece-item" data-shape="vertical" data-name="縦ブロック">
-                        <div class="piece-preview vertical-preview"></div>
-                        <span class="piece-name">縦ブロック</span>
-                    </div>
-                    
-                    <!-- 小ブロック -->
-                    <div class="piece-item" data-shape="square" data-name="小ブロック">
-                        <div class="piece-preview square-preview"></div>
-                        <span class="piece-name">小ブロック</span>
+                    <div class="piece-palette">
+                        <div class="piece-item selected" data-shape="empty" data-name="空">
+                            <div class="piece-preview empty"></div>
+                            <span>空</span>
+                        </div>
+                        <div class="piece-item" data-shape="main" data-name="箱入り娘">
+                            <div class="piece-preview mp"></div>
+                            <span>箱入り娘</span>
+                        </div>
+                        <div class="piece-item" data-shape="horizontal" data-name="横ブロック">
+                            <div class="piece-preview horizontal"></div>
+                            <span>横ブロック</span>
+                            <div class="piece-count">0/4</div>
+                        </div>
+                        <div class="piece-item" data-shape="vertical" data-name="縦ブロック">
+                            <div class="piece-preview vertical"></div>
+                            <span>縦ブロック</span>
+                            <div class="piece-count">0/4</div>
+                        </div>
+                        <div class="piece-item" data-shape="square" data-name="正方形">
+                            <div class="piece-preview square"></div>
+                            <span>正方形</span>
+                            <div class="piece-count">0/4</div>
+                        </div>
                     </div>
                 </div>
+                
+                <!-- 進捗表示エリア（常時表示） -->
+                <div class="progress-display-box" id="progress-display">
+                    <h3 id="progress-title">パズル操作</h3>
+                    <div class="progress-content">
+                        <div class="progress-text" id="progress-text" style="display: none;">A*アルゴリズムで解を探索中...</div>
+                        <div class="progress-stats" id="progress-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">経過時間:</span>
+                                <span class="stat-value" id="elapsed-time">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">探索数:</span>
+                                <span class="stat-value" id="explored-count">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">現在手数:</span>
+                                <span class="stat-value" id="current-moves">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">推定残り:</span>
+                                <span class="stat-value" id="estimated-remaining">-</span>
+                            </div>
+                        </div>
+                        <div class="board-controls">
+                            <button id="solve-puzzle" class="btn btn-primary">探索開始</button>
+                            <button id="stop-solving" class="btn btn-danger" style="display: none;">探索中止</button>
+                        </div>
+                    </div>
+                </div>
+                
             </div>
         </div>
         
-        <!-- メッセージ表示エリア -->
-        <div id="message-area" class="message-area"></div>
+        <div class="instructions">
+            <h3>使い方</h3>
+            <ol>
+                <li>右側のピース選択から配置したいピースをクリック</li>
+                <li>左側のパズルボードの好きな位置をクリックして配置</li>
+                <li>初期状態を設定したら「探索開始」ボタンを押す</li>
+                <li>解が見つかったら「次」「前」ボタンで手順を確認</li>
+                <li>探索中に中止したい場合は「探索中止」ボタンを押す</li>
+            </ol>
+            <p><strong>注意:</strong> 箱入り娘(MP)は2x2のサイズで、下部中央の出口に導くのが目標です。</p>
+            <p><strong>機能:</strong> リアルタイム進捗表示、探索中止機能、自動ピース選択リセット搭載</p>
+        </div>
     </div>
-
+    
     <script src="{{ url_for('static', filename='js/puzzle.js') }}"></script>
 </body>
 </html>
