@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>箱入り娘パズル</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>箱入り娘パズル</h1>
+        
+        <div class="main-layout">
+            <!-- パズルボード（左側） -->
+            <div class="puzzle-section">
+                <div class="puzzle-header">
+                    <h2>パズルボード</h2>
+                    <button id="reset-board" class="control-btn secondary-btn">盤面リセット</button>
+                </div>
+                
+                <div id="puzzle-board" class="puzzle-board">
+                    <!-- JavaScriptで動的に生成 -->
+                </div>
+                
+                <div class="controls">
+                    <button id="solve-puzzle" class="control-btn primary-btn">探索開始</button>
+                    <button id="stop-puzzle" class="control-btn danger-btn" style="display: none;">中止</button>
+                </div>
+                
+                <!-- 統計情報 -->
+                <div class="statistics">
+                    <div class="stat-item">
+                        <span class="stat-label">経過時間:</span>
+                        <span id="elapsed-time" class="stat-value">0秒</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">探索件数:</span>
+                        <span id="explored-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">現在手数:</span>
+                        <span id="current-moves" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">推定残り:</span>
+                        <span id="estimated-remaining" class="stat-value">-</span>
+                    </div>
+                </div>
+                
+                <!-- ステップコントロール -->
+                <div id="step-controls" class="step-controls" style="display: none;">
+                    <button id="prev-step-main" class="step-btn">◀ 前</button>
+                    <span id="step-display" class="step-display">1 / 1</span>
+                    <button id="next-step-main" class="step-btn">次 ▶</button>
+                </div>
+            </div>
+            
+            <!-- ピース選択パネル（右側） -->
+            <div class="piece-selection">
+                <h2>ピース選択</h2>
+                <div class="piece-grid">
+                    <!-- 空 -->
+                    <div class="piece-item selected" data-shape="empty" data-name="空">
+                        <div class="piece-preview empty-preview"></div>
+                        <span class="piece-name">空</span>
+                    </div>
+                    
+                    <!-- 箱入り娘（メインピース） -->
+                    <div class="piece-item" data-shape="main" data-name="箱入り娘">
+                        <div class="piece-preview main-preview"></div>
+                        <span class="piece-name">箱入り娘</span>
+                    </div>
+                    
+                    <!-- 横ブロック -->
+                    <div class="piece-item" data-shape="horizontal" data-name="横ブロック">
+                        <div class="piece-preview horizontal-preview"></div>
+                        <span class="piece-name">横ブロック</span>
+                    </div>
+                    
+                    <!-- 縦ブロック -->
+                    <div class="piece-item" data-shape="vertical" data-name="縦ブロック">
+                        <div class="piece-preview vertical-preview"></div>
+                        <span class="piece-name">縦ブロック</span>
+                    </div>
+                    
+                    <!-- 小ブロック -->
+                    <div class="piece-item" data-shape="square" data-name="小ブロック">
+                        <div class="piece-preview square-preview"></div>
+                        <span class="piece-name">小ブロック</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- メッセージ表示エリア -->
+        <div id="message-area" class="message-area"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/puzzle.js') }}"></script>
+</body>
+</html>
