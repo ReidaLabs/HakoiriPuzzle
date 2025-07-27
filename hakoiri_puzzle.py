@@ -1,4 +1,5 @@
 import heapq
+from copy import deepcopy
 
 # ピースのID定義
 EM = 0  # 空きマス
@@ -47,13 +48,13 @@ class HakoiriPuzzle:
         self.GOAL_MAIN_PIECE_COL_START = 1
         self.GOAL_MAIN_PIECE_COL_END = 1
         
-        # デフォルトの初期盤面
+        # デフォルトの初期盤面（確実に解ける標準配置・約30手）
         self.initial_board = [
-            [V1, MP, MP, S1],
-            [V1, MP, MP, S2], 
-            [V2, V3, V4, S3],
-            [V2, V3, V4, S4],
-            [EM, H1, H1, EM]
+            [S3, H3, H3, S4],
+            [V1, MP, MP, V2],
+            [V1, MP, MP, V2], 
+            [S1, H1, H1, S2],
+            [EM, H2, H2, EM]
         ]
         
     def set_initial_board(self, board):
@@ -107,7 +108,7 @@ class HakoiriPuzzle:
                 new_r, new_c = current_r + dr, current_c + dc
                 
                 if self.is_valid_move(board, piece_id, (current_r, current_c), (new_r, new_c), width, height):
-                    new_board = [row[:] for row in board]
+                    new_board = deepcopy(board)
                     
                     # 元の場所を空にする
                     for r_offset in range(height):
@@ -133,7 +134,7 @@ class HakoiriPuzzle:
                 self.GOAL_MAIN_PIECE_COL_START <= main_c <= self.GOAL_MAIN_PIECE_COL_END)
                 
     def calculate_heuristic(self, board):
-        """ヒューリスティック関数"""
+        """軽度改良されたヒューリスティック関数"""
         main_piece_pos = self.find_piece_top_left(board, MP)
         if not main_piece_pos:
             return float('inf')
@@ -142,50 +143,56 @@ class HakoiriPuzzle:
         main_h = PIECE_PROPERTIES[MP]['height']
         main_w = PIECE_PROPERTIES[MP]['width']
         
-        h1 = max(0, self.GOAL_MAIN_PIECE_ROW - main_r)
+        # 基本的な距離コスト
+        distance_to_goal = max(0, self.GOAL_MAIN_PIECE_ROW - main_r)
         
+        # 直下の障害物（重み高め）
         blocks_below_main = 0
         if main_r + main_h < self.BOARD_HEIGHT:
             for c_offset in range(main_w):
                 if board[main_r + main_h][main_c + c_offset] != EM:
                     if board[main_r + main_h][main_c + c_offset] != MP:
-                        blocks_below_main += 1
+                        blocks_below_main += 1.5  # 直下は重要度高
                         
+        # ゴールまでの経路の障害物
         blocks_in_goal_path = 0
         for r in range(main_r + main_h, self.BOARD_HEIGHT):
             for c in range(main_c, main_c + main_w):
                 if board[r][c] != EM and board[r][c] != MP:
-                    blocks_in_goal_path += 1
+                    # 距離に応じて重みを調整
+                    distance_factor = 1.0 / max(1, r - main_r - main_h + 1)
+                    blocks_in_goal_path += distance_factor
                     
+        # 水平位置の調整コスト
+        horizontal_penalty = 0
         if not (self.GOAL_MAIN_PIECE_COL_START <= main_c <= self.GOAL_MAIN_PIECE_COL_END):
             target_col = self.GOAL_MAIN_PIECE_COL_START
-            if main_c < target_col:
-                for r_offset in range(main_h):
-                    for c in range(main_c + main_w, target_col + main_w):
-                        if c < self.BOARD_WIDTH and board[main_r + r_offset][c] != EM:
-                            blocks_in_goal_path += 1
-            elif main_c > target_col:
-                for r_offset in range(main_h):
-                    for c in range(target_col, main_c):
-                        if c >= 0 and board[main_r + r_offset][c] != EM:
-                            blocks_in_goal_path += 1
+            horizontal_penalty = abs(main_c - target_col) * 0.5
                             
-        return h1 + blocks_below_main + blocks_in_goal_path
+        return distance_to_goal + blocks_below_main + blocks_in_goal_path + horizontal_penalty
         
 class State:
-    def __init__(self, board, g_cost, puzzle, parent=None, move=None):
+    def __init__(self, board, g_cost, puzzle, parent=None, move=None, last_piece_moved=None):
         self.board = board
         self.g_cost = g_cost
         self.parent = parent
         self.move = move
+        self.last_piece_moved = last_piece_moved  # 直前に動かしたピースを記録
         self.h_cost = puzzle.calculate_heuristic(board)
         self.f_cost = self.g_cost + self.h_cost
+        self._hash = None  # ハッシュキャッシュ
         
     def __lt__(self, other):
         return self.f_cost < other.f_cost
         
     def __hash__(self):
-        return hash(tuple(map(tuple, self.board)))
+        if self._hash is None:
+            # ビット演算で高速ハッシュ化
+            self._hash = 0
+            for i, row in enumerate(self.board):
+                for j, cell in enumerate(row):
+                    self._hash ^= (cell * 97 + i * 13 + j * 7) << ((i * 4 + j) % 32)
+        return self._hash
         
     def __eq__(self, other):
         return self.board == other.board
@@ -193,6 +200,8 @@ class State:
 class HakoiriSolver:
     def __init__(self, puzzle):
         self.puzzle = puzzle
+        self.duplicate_states = set()  # 重複状態のキャッシュ
+        self.pattern_cache = {}  # パターンキャッシュ
         self.progress_callback = None
         self.stop_flag_func = None
         
@@ -269,3 +278,68 @@ class HakoiriSolver:
             self.progress_callback(final_info)
             
         return None
+
+    def solve_with_progress(self):
+        """進捗表示付きでパズルを解く（メインエントリポイント）"""
+        return self.solve_astar()
+
+    def is_deadlock(self, board):
+        """デッドロック状態の早期検出"""
+        main_piece_pos = self.puzzle.find_piece_top_left(board, MP)
+        if not main_piece_pos:
+            return True
+        
+        main_r, main_c = main_piece_pos
+        
+        # 角に追い込まれた状態
+        if main_r == 0:
+            if main_c == 0:  # 左上角
+                # 右と下がブロックされているか
+                right_blocked = (main_c + 2 < self.puzzle.BOARD_WIDTH and 
+                               board[main_r][main_c + 2] != EM and board[main_r + 1][main_c + 2] != EM)
+                down_blocked = (main_r + 2 < self.puzzle.BOARD_HEIGHT and 
+                              board[main_r + 2][main_c] != EM and board[main_r + 2][main_c + 1] != EM)
+                if right_blocked and down_blocked:
+                    return True
+            elif main_c == self.puzzle.BOARD_WIDTH - 2:  # 右上角
+                left_blocked = (main_c > 0 and 
+                              board[main_r][main_c - 1] != EM and board[main_r + 1][main_c - 1] != EM)
+                down_blocked = (main_r + 2 < self.puzzle.BOARD_HEIGHT and 
+                              board[main_r + 2][main_c] != EM and board[main_r + 2][main_c + 1] != EM)
+                if left_blocked and down_blocked:
+                    return True
+        
+        # 4方向すべてブロックされた状態
+        blocked_count = 0
+        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # 右、左、下、上
+        
+        for dr, dc in directions:
+            new_r, new_c = main_r + dr, main_c + dc
+            if (0 <= new_r < self.puzzle.BOARD_HEIGHT - 1 and 
+                0 <= new_c < self.puzzle.BOARD_WIDTH - 1):
+                if not self.puzzle.is_valid_move(board, MP, (main_r, main_c), (new_r, new_c), 2, 2):
+                    blocked_count += 1
+        
+        return blocked_count >= 4
+    
+    def is_reverse_move(self, current_state, piece_moved):
+        """直前の移動の逆かどうかチェック"""
+        if not hasattr(current_state, 'last_piece_moved') or current_state.last_piece_moved is None:
+            return False
+        
+        # 同じピースが連続で動いた場合は逆操作の可能性が高い
+        return current_state.last_piece_moved == piece_moved
+    
+    def is_symmetric_duplicate(self, board):
+        """対称状態のチェック（簡単な左右対称）"""
+        # 左右対称のチェック
+        mirrored_board = [row[::-1] for row in board]
+        
+        board_str = str(board)
+        mirrored_str = str(mirrored_board)
+        
+        if mirrored_str in self.duplicate_states:
+            return True
+        
+        self.duplicate_states.add(board_str)
+        return False
