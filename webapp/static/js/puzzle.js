@@ -516,7 +516,6 @@ class HakoiriPuzzleUI {
         document.querySelector('.piece-item[data-shape="empty"]').classList.add('selected');
         this.selectedShape = 'empty';
         
-        this.board = Array(5).fill(null).map(() => Array(4).fill(0));
         this.currentStep = 0;
         this.totalSteps = 0;
         this.solutionAvailable = false;
@@ -529,7 +528,8 @@ class HakoiriPuzzleUI {
             square: 10
         };
         
-        this.renderBoard();
+        // デフォルトの盤面を復元
+        this.loadDefaultBoard();
         this.hideStepControls();
         this.clearMessage();
     }

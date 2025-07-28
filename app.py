@@ -74,16 +74,22 @@ def solve_with_timeout(solver_func, timeout_seconds=600):
 def create_progress_callback(session_id):
     """進捗コールバック関数を作成"""
     def progress_callback(info):
+        print(f"DEBUG: progress_callback called with session_id={session_id}, info={info}")
         if session_id in progress_queues:
             try:
                 progress_queues[session_id].put_nowait(info)
+                print(f"DEBUG: Successfully added to queue")
             except queue.Full:
+                print(f"DEBUG: Queue full, clearing and retrying")
                 # キューが満杯の場合は古いデータを1つ削除してから追加
                 try:
                     progress_queues[session_id].get_nowait()
                     progress_queues[session_id].put_nowait(info)
+                    print(f"DEBUG: Successfully added after clearing")
                 except queue.Empty:
-                    pass
+                    print(f"DEBUG: Queue was empty when trying to clear")
+        else:
+            print(f"DEBUG: session_id {session_id} not found in progress_queues")
     return progress_callback
 
 @app.route('/api/solve', methods=['POST'])
@@ -97,6 +103,9 @@ def solve_puzzle():
     session['task_id'] = session_id
     progress_queues[session_id] = queue.Queue(maxsize=50)  # キューサイズを縮小
     stop_flags[session_id] = False  # 中止フラグを初期化
+    
+    print(f"DEBUG: solve_puzzle - session_id = {session_id}")
+    print(f"DEBUG: solve_puzzle - progress_queues keys after = {list(progress_queues.keys())}")
     
     # 初期盤面をコピー（バックグラウンドスレッド用）
     initial_board = [row[:] for row in session['initial_board']]
@@ -266,14 +275,23 @@ def prev_step():
 @app.route('/api/progress')
 def get_progress():
     """Server-Sent Eventsで進捗を配信"""
-    # セッションIDを事前に取得
-    session_id = session.get('task_id')
+    # URLパラメータからセッションIDを取得
+    session_id = request.args.get('session_id')
+    if not session_id:
+        # フォールバックとして従来のセッションからも取得を試行
+        session_id = session.get('task_id')
+    
+    print(f"DEBUG: session_id = {session_id}")
+    print(f"DEBUG: progress_queues keys = {list(progress_queues.keys())}")
+    
     if not session_id or session_id not in progress_queues:
         def error_stream():
-            yield f"data: {json.dumps({'error': 'セッションが見つかりません'})}\\n\\n"
+            yield f"data: {json.dumps({'error': f'セッションが見つかりません: {session_id}'})}\\n\\n"
         response = Response(error_stream(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache'
         response.headers['Connection'] = 'keep-alive'
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
         return response
     
     def event_stream(session_id):

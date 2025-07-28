@@ -49,9 +49,17 @@ class HakoiriPuzzleUI {
     }
     
     init() {
-        this.createBoard();
-        this.setupEventListeners();
-        this.loadDefaultBoard();
+        console.log('HakoiriPuzzleUI init() started');
+        try {
+            this.createBoard();
+            console.log('createBoard() completed');
+            this.setupEventListeners();
+            console.log('setupEventListeners() completed');
+            this.loadDefaultBoard();
+            console.log('loadDefaultBoard() completed');
+        } catch (error) {
+            console.error('Error in init():', error);
+        }
     }
     
     createBoard() {
@@ -94,7 +102,10 @@ class HakoiriPuzzleUI {
     
     setupEventListeners() {
         // ピース選択（形状ベース）
-        document.querySelectorAll('.piece-item').forEach(item => {
+        const pieceItems = document.querySelectorAll('.piece-item');
+        console.log('Found piece items:', pieceItems.length);
+        
+        pieceItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 const shape = item.dataset.shape;
                 
@@ -111,8 +122,23 @@ class HakoiriPuzzleUI {
         });
         
         // コントロールボタン
-        document.getElementById('reset-board').addEventListener('click', () => this.resetBoard());
-        document.getElementById('solve-puzzle').addEventListener('click', () => this.solvePuzzle());
+        const resetButton = document.getElementById('reset-board');
+        const solveButton = document.getElementById('solve-puzzle');
+        
+        console.log('Reset button found:', !!resetButton);
+        console.log('Solve button found:', !!solveButton);
+        
+        if (resetButton) {
+            resetButton.addEventListener('click', () => this.resetBoard());
+        } else {
+            console.error('reset-board button not found!');
+        }
+        
+        if (solveButton) {
+            solveButton.addEventListener('click', () => this.solvePuzzle());
+        } else {
+            console.error('solve-puzzle button not found!');
+        }
         
         // 中止ボタンがあるかチェックして追加
         const stopButton = document.getElementById('stop-solving');
@@ -511,12 +537,13 @@ class HakoiriPuzzleUI {
     }
     
     resetBoard() {
+        console.log('resetBoard() called');
+        
         // 選択を空に戻す
         document.querySelectorAll('.piece-item').forEach(p => p.classList.remove('selected'));
         document.querySelector('.piece-item[data-shape="empty"]').classList.add('selected');
         this.selectedShape = 'empty';
         
-        this.board = Array(5).fill(null).map(() => Array(4).fill(0));
         this.currentStep = 0;
         this.totalSteps = 0;
         this.solutionAvailable = false;
@@ -529,22 +556,27 @@ class HakoiriPuzzleUI {
             square: 10
         };
         
-        this.renderBoard();
+        // デフォルトの盤面を再設定
+        this.loadDefaultBoard();
         this.hideStepControls();
         this.clearMessage();
     }
     
     async solvePuzzle() {
+        console.log('solvePuzzle() started');
         this.startProgressIndicator();
         
         try {
             // 盤面の初期化
+            console.log('Sending initialize request...');
             const initResponse = await fetch('/api/initialize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ board: this.board })
+                body: JSON.stringify({ board: this.board }),
+                credentials: 'same-origin'
             });
             const initData = await initResponse.json();
+            console.log('Initialize response:', initData);
             
             if (!initData.success) {
                 this.stopProgressIndicator();
@@ -553,16 +585,23 @@ class HakoiriPuzzleUI {
             }
             
             // パズルを解く（バックグラウンド処理開始）
+            console.log('Sending solve request...');
             const solveResponse = await fetch('/api/solve', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
             });
             const solveData = await solveResponse.json();
+            console.log('Solve response:', solveData);
             
             if (solveData.success) {
+                console.log('Starting real-time progress...');
+                console.log('Session ID:', solveData.session_id);
+                this.sessionId = solveData.session_id;
                 // リアルタイム進捗表示開始
                 this.startRealTimeProgress();
             } else {
+                console.error('Solve failed:', solveData.error);
                 this.stopProgressIndicator();
                 this.showMessage('解決開始に失敗しました: ' + solveData.error + ' [クリックで閉じる]', 'error', false);
             }
@@ -578,7 +617,8 @@ class HakoiriPuzzleUI {
             // 中止リクエスト送信
             const response = await fetch('/api/stop', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin'
             });
             
             if (response.ok) {
@@ -598,16 +638,28 @@ class HakoiriPuzzleUI {
     }
     
     startRealTimeProgress() {
+        console.log('startRealTimeProgress() called');
         if (this.progressEventSource) {
+            console.log('Closing existing EventSource');
             this.progressEventSource.close();
         }
         
         // Server-Sent Eventsで進捗を受信
-        this.progressEventSource = new EventSource('/api/progress');
+        const progressUrl = `/api/progress?session_id=${this.sessionId}`;
+        console.log('Creating new EventSource for:', progressUrl);
+        this.progressEventSource = new EventSource(progressUrl, {
+            withCredentials: true
+        });
+        
+        this.progressEventSource.onopen = (event) => {
+            console.log('EventSource opened:', event);
+        };
         
         this.progressEventSource.onmessage = (event) => {
+            console.log('EventSource message received:', event.data);
             try {
                 const data = JSON.parse(event.data);
+                console.log('Parsed progress data:', data);
                 this.handleProgressUpdate(data);
             } catch (error) {
                 console.error('進捗データのパースエラー:', error);
@@ -616,6 +668,7 @@ class HakoiriPuzzleUI {
         
         this.progressEventSource.onerror = (error) => {
             console.error('進捗受信エラー:', error);
+            console.log('EventSource readyState:', this.progressEventSource.readyState);
             this.progressEventSource.close();
             this.progressEventSource = null;
         };
@@ -793,7 +846,9 @@ class HakoiriPuzzleUI {
     
     async displayStep(step) {
         try {
-            const response = await fetch(`/api/get_step/${step}`);
+            const response = await fetch(`/api/get_step/${step}`, {
+                credentials: 'same-origin'
+            });
             const data = await response.json();
             
             if (data.success) {

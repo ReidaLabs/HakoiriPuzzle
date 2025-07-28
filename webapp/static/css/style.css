@@ -50,7 +50,7 @@ h1 {
 /* 進捗表示スタイル */
 .progress-display-box {
     background: linear-gradient(135deg, #f3f9ff 0%, #e8f4fd 100%);
-    padding: 10px;
+    padding: 15px;
     border-radius: 10px;
     border: 2px solid #90caf9;
     border-left: 5px solid #64b5f6;
@@ -59,21 +59,19 @@ h1 {
     min-width: 280px;
 }
 
-
 .progress-display-box h3 {
     color: #1976d2;
-    margin: 0 0 10px 0;
+    margin: 0 0 15px 0;
     font-size: 1.1rem;
     font-weight: 600;
     position: relative;
     text-align: center;
 }
 
-
 .progress-content {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     align-items: center;
 }
 
@@ -90,7 +88,8 @@ h1 {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, auto);
     gap: 12px;
-    width: fit-content;
+    width: 100%;
+    max-width: 300px;
     margin: 0 auto;
     justify-content: center;
     justify-items: center;
@@ -112,7 +111,8 @@ h1 {
     border-radius: 8px;
     border: 1px solid rgba(33, 150, 243, 0.2);
     min-height: 80px;
-    min-width: 120px;
+    width: 100%;
+    max-width: 140px;
 }
 
 .stat-label {
@@ -133,29 +133,13 @@ h1 {
     border-radius: 4px;
     transition: all 0.3s ease;
     border: 1px solid rgba(33, 150, 243, 0.3);
-    min-width: 80px;
+    min-width: 90px;
     white-space: nowrap;
 }
 
 .stat-value.updating {
     background: rgba(33, 150, 243, 0.3);
     transform: scale(1.05);
-}
-
-.progress-bar {
-    width: 100%;
-    height: 8px;
-    background: #e9ecef;
-    border-radius: 4px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    border-radius: 4px;
-    transition: width 0.3s ease;
-    width: 0%;
 }
 
 h2 {
@@ -331,12 +315,27 @@ h3 {
     transform: translateY(-2px);
 }
 
+.btn-warning {
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #f57c00 0%, #ef6c00 100%);
+    transform: translateY(-2px);
+}
+
+.btn-small {
+    padding: 8px 16px;
+    font-size: 12px;
+}
+
 .board-controls {
     display: flex;
-    gap: 15px;
+    gap: 10px;
     justify-content: center;
-    margin-top: 10px;
-    padding-top: 10px;
+    margin-top: 15px;
+    padding-top: 12px;
     border-top: 1px solid #e9ecef;
 }
 
@@ -394,6 +393,17 @@ h3 {
     border: 2px solid #e9ecef;
 }
 
+.piece-selection-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.piece-selection-header h2 {
+    margin: 0;
+}
+
 .piece-palette {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -424,6 +434,11 @@ h3 {
     border-color: #667eea;
     background: #f0f4ff;
     box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+}
+
+.piece-item.max-reached {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .piece-preview {
@@ -479,191 +494,34 @@ h3 {
 
 .piece-count {
     font-size: 10px;
-    color: #666;
-    margin-top: 0;
-    font-weight: 600;
-}
-
-.piece-item.max-reached {
-    opacity: 0.6;
-    pointer-events: none;
-}
-
-.piece-item.max-reached .piece-count {
-    color: #dc3545;
-    font-weight: bold;
-}
-
-/* 解のコントロール */
-.solution-controls {
-    background: white;
-    padding: 20px;
-    border-radius: 8px;
-    border: 2px solid #e9ecef;
-}
-
-.step-info {
-    text-align: center;
-    margin-bottom: 15px;
-    font-weight: 500;
-    color: #555;
-}
-
-.step-controls {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 15px;
-}
-
-.move-description {
-    background: #f8f9fa;
-    padding: 10px;
-    border-radius: 5px;
-    text-align: center;
-    font-size: 14px;
-    color: #555;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: #888;
+    background: #e9ecef;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-top: 2px;
 }
 
 /* ステータスメッセージ */
 .status-message {
-    padding: 15px;
+    margin-top: 15px;
+    padding: 12px;
     border-radius: 6px;
     text-align: center;
     font-weight: 500;
-    margin-top: 20px;
+    display: none;
     transition: all 0.3s ease;
 }
 
-/* プログレスインジケーター */
-.status-message.progress {
-    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-    border: 1px solid #2196f3;
-    color: #1565c0;
-}
-
-.progress-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 15px;
-}
-
-.progress-text {
-    font-weight: 600;
-    font-size: 16px;
-}
-
-.progress-stats {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 15px;
-    margin: 10px 0;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-}
-
-.stat-item {
-    text-align: center;
-}
-
-.stat-label {
-    display: block;
-    font-size: 12px;
-    color: #666;
-    margin-bottom: 2px;
-}
-
-.stat-value {
-    display: block;
-    font-size: 14px;
-    font-weight: bold;
-    color: #1565c0;
-}
-
-.progress-bar {
-    width: 200px;
-    height: 6px;
-    background: rgba(33, 150, 243, 0.2);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    width: 0%;
-    background: linear-gradient(90deg, #2196f3, #21cbf3, #2196f3);
-    background-size: 200% 100%;
-    animation: progressFlow 2s linear infinite;
-    transition: width 0.3s ease;
-}
-
-@keyframes progressFlow {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
-}
-
-.progress-dots {
-    display: flex;
-    gap: 8px;
-}
-
-.progress-dots .dot {
-    width: 8px;
-    height: 8px;
-    background: #2196f3;
-    border-radius: 50%;
-    animation: dotBounce 1.4s ease-in-out infinite both;
-}
-
-.progress-dots .dot:nth-child(1) { animation-delay: -0.32s; }
-.progress-dots .dot:nth-child(2) { animation-delay: -0.16s; }
-.progress-dots .dot:nth-child(3) { animation-delay: 0s; }
-
-@keyframes dotBounce {
-    0%, 80%, 100% { transform: scale(0.8); opacity: 0.5; }
-    40% { transform: scale(1.2); opacity: 1; }
+.status-message.info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
 }
 
 .status-message.success {
     background: #d4edda;
     color: #155724;
     border: 1px solid #c3e6cb;
-    user-select: none;
-    transition: all 0.2s ease;
-}
-
-.status-message.success:hover {
-    background: #c3e6cb;
-    transform: translateY(-1px);
-}
-
-.status-message.success[style*="cursor: pointer"]::after {
-    content: " 👆";
-    opacity: 0.7;
-}
-
-.status-message.error {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
-    user-select: none;
-    transition: all 0.2s ease;
-}
-
-.status-message.error:hover {
-    background: #f1b0b7;
-    transform: translateY(-1px);
-}
-
-.status-message.error[style*="cursor: pointer"]::after {
-    content: " 👆";
-    opacity: 0.7;
 }
 
 .status-message.warning {
@@ -672,17 +530,22 @@ h3 {
     border: 1px solid #ffeaa7;
 }
 
-.status-message.info {
-    background: #cce7ff;
-    color: #004085;
-    border: 1px solid #b3d7ff;
+.status-message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
 
-/* 使い方説明 */
+/* 説明セクション */
 .instructions {
     background: #f8f9fa;
     padding: 20px;
-    border-top: 1px solid #e9ecef;
+    margin-top: 0;
+}
+
+.instructions h3 {
+    margin-bottom: 15px;
+    color: #333;
 }
 
 .instructions ol {
@@ -690,17 +553,28 @@ h3 {
     margin-bottom: 15px;
 }
 
-.instructions li {
+.instructions ol li {
     margin-bottom: 8px;
-    line-height: 1.6;
+    line-height: 1.4;
 }
 
 .instructions p {
     color: #666;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
-/* 紙吹雪エフェクト */
+/* アニメーション */
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-100vh) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
 .celebration-container {
     position: fixed;
     top: 0;
@@ -711,65 +585,28 @@ h3 {
     z-index: 9999;
 }
 
-.confetti {
-    border-radius: 2px;
-}
-
-@keyframes confetti-fall {
-    0% {
-        transform: translateY(-10px) rotate(0deg);
-        opacity: 1;
-    }
-    100% {
-        transform: translateY(100vh) rotate(720deg);
-        opacity: 0;
-    }
-}
-
 /* レスポンシブデザイン */
 @media (max-width: 768px) {
     .main-content {
         flex-direction: column;
-        gap: 20px;
-        padding: 20px;
     }
     
     .puzzle-board {
-        grid-template-columns: repeat(4, 80px);
-        grid-template-rows: repeat(5, 80px);
+        grid-template-columns: repeat(4, 60px);
+        grid-template-rows: repeat(5, 60px);
     }
     
-    .board-container {
-        height: auto;
+    .progress-stats {
+        grid-template-columns: 1fr;
+        gap: 8px;
     }
     
-    .control-section {
-        height: auto;
+    .stat-item {
+        max-width: none;
     }
     
     .piece-palette {
-        grid-template-columns: repeat(4, 1fr);
-        gap: 4px;
-    }
-    
-    h1 {
-        font-size: 2rem;
-        padding: 20px;
-    }
-}
-
-@media (max-width: 480px) {
-    .puzzle-board {
-        grid-template-columns: repeat(4, 50px);
-        grid-template-rows: repeat(5, 50px);
-    }
-    
-    .board-controls {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .step-controls {
-        flex-direction: column;
+        grid-template-columns: repeat(3, 1fr);
+        grid-template-rows: repeat(2, auto);
     }
 }
