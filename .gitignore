@@ -97,3 +97,14 @@ node_modules/
 
 # Yarn Integrity file
 .yarn-integrity
+
+# Archive folder (development files not for GitHub)
+archive/
+
+# Temporary files
+*.txt
+*.tmp
+
+# Session files
+*cookies*
+*session*

@@ -39,9 +39,9 @@
             <div class="control-section">
                 <!-- ピース選択エリア -->
                 <div class="piece-selection-box">
-                    <div class="piece-header">
+                    <div class="piece-selection-header">
                         <h2>ピース選択</h2>
-                        <button id="reset-board-quick" class="btn btn-secondary btn-small">盤面リセット</button>
+                        <button id="reset-board" class="btn btn-secondary btn-small">盤面リセット</button>
                     </div>
                     <div class="piece-palette">
                         <div class="piece-item selected" data-shape="empty" data-name="空">
@@ -95,7 +95,7 @@
                         </div>
                         <div class="board-controls">
                             <button id="solve-puzzle" class="btn btn-primary">探索開始</button>
-                            <button id="stop-solving" class="btn btn-danger" style="display: none;">探索中止</button>
+                            <button id="stop-solving" class="btn btn-warning" style="display: none;">中止</button>
                         </div>
                     </div>
                 </div>
@@ -110,10 +110,8 @@
                 <li>左側のパズルボードの好きな位置をクリックして配置</li>
                 <li>初期状態を設定したら「探索開始」ボタンを押す</li>
                 <li>解が見つかったら「次」「前」ボタンで手順を確認</li>
-                <li>探索中に中止したい場合は「探索中止」ボタンを押す</li>
             </ol>
             <p><strong>注意:</strong> 箱入り娘(MP)は2x2のサイズで、下部中央の出口に導くのが目標です。</p>
-            <p><strong>機能:</strong> リアルタイム進捗表示、探索中止機能、自動ピース選択リセット搭載</p>
         </div>
     </div>
     
