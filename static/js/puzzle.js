@@ -5,13 +5,6 @@ class HakoiriPuzzleUI {
         this.currentStep = 0;
         this.totalSteps = 0;
         this.solutionAvailable = false;
-        this.solutionData = [];
-        this.sessionId = Date.now().toString();
-        
-        // 進捗表示用
-        this.progressEventSource = null;
-        this.startTime = null;
-        this.timerInterval = null;
         
         // ドラッグ&ドロップ用の状態
         this.draggedPieceId = null;
@@ -120,7 +113,12 @@ class HakoiriPuzzleUI {
         // コントロールボタン
         document.getElementById('reset-board').addEventListener('click', () => this.resetBoard());
         document.getElementById('solve-puzzle').addEventListener('click', () => this.solvePuzzle());
-        document.getElementById('stop-puzzle').addEventListener('click', () => this.stopSolving());
+        
+        // 中止ボタンがあるかチェックして追加
+        const stopButton = document.getElementById('stop-solving');
+        if (stopButton) {
+            stopButton.addEventListener('click', () => this.stopSolving());
+        }
         
         // ステップコントロール（メイン）
         document.getElementById('next-step-main').addEventListener('click', () => this.nextStep());
@@ -205,86 +203,72 @@ class HakoiriPuzzleUI {
         const row = parseInt(event.target.dataset.row);
         const col = parseInt(event.target.dataset.col);
         
-        // ドロップ実行
+        // ドロップ処理
         if (this.canDropPieceAt(this.draggedPieceId, row, col)) {
             this.movePiece(this.draggedPieceId, this.draggedPieceOrigin, { row, col });
-            this.renderBoard();
         }
         
         // ドラッグ状態をリセット
-        this.clearDragState();
-    }
-    
-    clearDragState() {
-        this.highlightDraggedPiece(this.draggedPieceId, false);
-        this.clearDropHighlights();
-        this.draggedPieceId = null;
-        this.draggedPieceOrigin = null;
-        document.body.style.cursor = 'default';
+        this.resetDragState();
     }
     
     highlightDraggedPiece(pieceId, highlight) {
-        if (!pieceId) return;
-        
-        const cells = document.querySelectorAll(`[data-piece-id="${pieceId}"]`);
+        const cells = document.querySelectorAll('.board-cell');
         cells.forEach(cell => {
-            if (highlight) {
-                cell.classList.add('dragging');
-            } else {
-                cell.classList.remove('dragging');
+            const cellRow = parseInt(cell.dataset.row);
+            const cellCol = parseInt(cell.dataset.col);
+            if (this.board[cellRow][cellCol] === pieceId) {
+                if (highlight) {
+                    cell.classList.add('dragging');
+                } else {
+                    cell.classList.remove('dragging');
+                }
             }
         });
     }
     
-    highlightDropZone(pieceId, row, col, highlight) {
-        const properties = this.pieceProperties[pieceId];
-        if (!properties) return;
+    highlightDropZone(pieceId, targetRow, targetCol, highlight) {
+        const piece = this.pieceProperties[pieceId];
+        if (!piece) return;
         
-        for (let r = 0; r < properties.height; r++) {
-            for (let c = 0; c < properties.width; c++) {
-                const targetRow = row + r;
-                const targetCol = col + c;
-                if (targetRow < 5 && targetCol < 4) {
-                    const cell = document.querySelector(`[data-row="${targetRow}"][data-col="${targetCol}"]`);
-                    if (cell) {
-                        if (highlight) {
-                            cell.classList.add('drop-zone');
-                        } else {
-                            cell.classList.remove('drop-zone');
-                        }
-                    }
+        const cells = document.querySelectorAll('.board-cell');
+        cells.forEach(cell => {
+            const cellRow = parseInt(cell.dataset.row);
+            const cellCol = parseInt(cell.dataset.col);
+            
+            // ドロップ先の範囲内かチェック
+            if (cellRow >= targetRow && cellRow < targetRow + piece.height &&
+                cellCol >= targetCol && cellCol < targetCol + piece.width) {
+                if (highlight) {
+                    cell.classList.add('drop-zone');
+                } else {
+                    cell.classList.remove('drop-zone');
                 }
             }
-        }
+        });
     }
     
     clearDropHighlights() {
-        document.querySelectorAll('.drop-target').forEach(cell => {
-            cell.classList.remove('drop-target');
-        });
-        document.querySelectorAll('.drop-zone').forEach(cell => {
-            cell.classList.remove('drop-zone');
+        const cells = document.querySelectorAll('.board-cell');
+        cells.forEach(cell => {
+            cell.classList.remove('drop-target', 'drop-zone');
         });
     }
     
-    canDropPieceAt(pieceId, row, col) {
-        const properties = this.pieceProperties[pieceId];
-        if (!properties) return false;
+    canDropPieceAt(pieceId, targetRow, targetCol) {
+        const piece = this.pieceProperties[pieceId];
+        if (!piece) return false;
         
-        // 境界チェック
-        if (row + properties.height > 5 || col + properties.width > 4) {
+        // 盤面外チェック
+        if (targetRow + piece.height > 5 || targetCol + piece.width > 4) {
             return false;
         }
         
-        // 配置可能性チェック
-        for (let r = 0; r < properties.height; r++) {
-            for (let c = 0; c < properties.width; c++) {
-                const targetRow = row + r;
-                const targetCol = col + c;
-                const currentPieceId = this.board[targetRow][targetCol];
-                
-                // 空きセルまたは移動中のピース自身の場合のみOK
-                if (currentPieceId !== 0 && currentPieceId !== pieceId) {
+        // 衝突チェック（自分自身は除く）
+        for (let r = targetRow; r < targetRow + piece.height; r++) {
+            for (let c = targetCol; c < targetCol + piece.width; c++) {
+                const cellValue = this.board[r][c];
+                if (cellValue !== 0 && cellValue !== pieceId) {
                     return false;
                 }
             }
@@ -294,113 +278,146 @@ class HakoiriPuzzleUI {
     }
     
     movePiece(pieceId, fromPos, toPos) {
-        const properties = this.pieceProperties[pieceId];
-        if (!properties) return;
-        
         // 元の位置をクリア
-        for (let r = 0; r < 5; r++) {
-            for (let c = 0; c < 4; c++) {
-                if (this.board[r][c] === pieceId) {
-                    this.board[r][c] = 0;
+        this.clearExistingPiece(pieceId);
+        
+        // 新しい位置に配置
+        const piece = this.pieceProperties[pieceId];
+        for (let r = toPos.row; r < toPos.row + piece.height; r++) {
+            for (let c = toPos.col; c < toPos.col + piece.width; c++) {
+                this.board[r][c] = pieceId;
+            }
+        }
+        
+        this.renderBoard();
+    }
+    
+    resetDragState() {
+        this.highlightDraggedPiece(this.draggedPieceId, false);
+        this.clearDropHighlights();
+        this.draggedPieceId = null;
+        this.draggedPieceOrigin = null;
+        document.body.style.cursor = 'default';
+    }
+    
+    clearExistingPiece(pieceId) {
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 4; col++) {
+                if (this.board[row][col] === pieceId) {
+                    this.board[row][col] = 0;
+                }
+            }
+        }
+    }
+    
+    placePiece(row, col, pieceId) {
+        const piece = this.pieceProperties[pieceId];
+        if (!piece) return;
+        
+        // 配置可能かチェック
+        if (row + piece.height > 5 || col + piece.width > 4) {
+            this.showMessage('ピースが盤面からはみ出します', 'error');
+            return;
+        }
+        
+        // 同じピースIDが既に存在する場合は削除
+        this.clearExistingPiece(pieceId);
+        
+        // 配置先に他のピースがある場合はエラー
+        for (let r = row; r < row + piece.height; r++) {
+            for (let c = col; c < col + piece.width; c++) {
+                if (this.board[r][c] !== 0) {
+                    this.showMessage('他のピースと重複しています', 'error');
+                    return;
                 }
             }
         }
         
-        // 新しい位置に配置
-        for (let r = 0; r < properties.height; r++) {
-            for (let c = 0; c < properties.width; c++) {
-                this.board[toPos.row + r][toPos.col + c] = pieceId;
+        // ピースを配置
+        for (let r = row; r < row + piece.height; r++) {
+            for (let c = col; c < col + piece.width; c++) {
+                this.board[r][c] = pieceId;
             }
         }
     }
     
     clearPieceAt(row, col) {
         const pieceId = this.board[row][col];
-        if (pieceId === 0) return;
-        
-        // 同じピースIDのセルをすべてクリア
-        for (let r = 0; r < 5; r++) {
-            for (let c = 0; c < 4; c++) {
-                if (this.board[r][c] === pieceId) {
-                    this.board[r][c] = 0;
-                }
-            }
+        if (pieceId !== 0) {
+            this.clearExistingPiece(pieceId);
         }
     }
     
     placeShapePiece(row, col, shape) {
-        const shapeData = this.shapeDefinitions[shape];
-        if (!shapeData) return;
+        if (shape === 'empty') return;
+        
+        const shapeInfo = this.shapeDefinitions[shape];
+        if (!shapeInfo) return;
         
         // 配置可能かチェック
-        if (row + shapeData.height > 5 || col + shapeData.width > 4) {
-            this.showMessage('範囲外に配置することはできません', 'warning');
+        if (row + shapeInfo.height > 5 || col + shapeInfo.width > 4) {
+            this.showMessage(`${shape}が盤面からはみ出します`, 'error');
             return;
-        }
-        
-        // 重複チェック
-        for (let r = 0; r < shapeData.height; r++) {
-            for (let c = 0; c < shapeData.width; c++) {
-                if (this.board[row + r][col + c] !== 0) {
-                    this.showMessage('他のピースと重複しています', 'warning');
-                    return;
-                }
-            }
         }
         
         // 最大数チェック
-        if (this.getShapeCount(shape) >= shapeData.maxCount) {
+        if (this.getShapeCount(shape) >= shapeInfo.maxCount) {
             this.showMessage(`${shape}の最大配置数に達しています`, 'warning');
             return;
+        }
+        
+        // 配置先に他のピースがある場合はクリア
+        for (let r = row; r < row + shapeInfo.height; r++) {
+            for (let c = col; c < col + shapeInfo.width; c++) {
+                const existingPieceId = this.board[r][c];
+                if (existingPieceId !== 0) {
+                    this.clearExistingPiece(existingPieceId);
+                }
+            }
         }
         
         // 新しいピースIDを取得
         const pieceId = this.getNextPieceId(shape);
         
-        // 配置
-        for (let r = 0; r < shapeData.height; r++) {
-            for (let c = 0; c < shapeData.width; c++) {
-                this.board[row + r][col + c] = pieceId;
+        // ピースを配置
+        for (let r = row; r < row + shapeInfo.height; r++) {
+            for (let c = col; c < col + shapeInfo.width; c++) {
+                this.board[r][c] = pieceId;
             }
         }
     }
     
     getNextPieceId(shape) {
-        const baseId = this.nextPieceIds[shape];
-        const maxCount = this.shapeDefinitions[shape].maxCount;
-        
-        for (let i = 0; i < maxCount; i++) {
-            const checkId = baseId + i;
-            if (!this.isPieceIdUsed(checkId)) {
-                return checkId;
-            }
-        }
-        
-        return baseId; // フォールバック
-    }
-    
-    isPieceIdUsed(pieceId) {
-        for (let r = 0; r < 5; r++) {
-            for (let c = 0; c < 4; c++) {
-                if (this.board[r][c] === pieceId) {
-                    return true;
-                }
-            }
-        }
-        return false;
+        const nextId = this.nextPieceIds[shape];
+        this.nextPieceIds[shape]++;
+        return nextId;
     }
     
     getShapeCount(shape) {
-        const baseId = this.nextPieceIds[shape];
-        const maxCount = this.shapeDefinitions[shape].maxCount;
         let count = 0;
+        const shapeInfo = this.shapeDefinitions[shape];
         
-        for (let i = 0; i < maxCount; i++) {
-            const checkId = baseId + i;
-            if (this.isPieceIdUsed(checkId)) {
-                count++;
+        // 形状に対応するピースIDの範囲をチェック
+        const usedIds = new Set();
+        for (let row = 0; row < 5; row++) {
+            for (let col = 0; col < 4; col++) {
+                const pieceId = this.board[row][col];
+                if (pieceId > 0) {
+                    usedIds.add(pieceId);
+                }
             }
         }
+        
+        // 形状別のカウント
+        usedIds.forEach(id => {
+            const piece = this.pieceProperties[id];
+            if (piece) {
+                if (shape === 'main' && id === 1) count++;
+                else if (shape === 'horizontal' && id >= 2 && id <= 5) count++;
+                else if (shape === 'vertical' && id >= 6 && id <= 9) count++;
+                else if (shape === 'square' && id >= 10 && id <= 13) count++;
+            }
+        });
         
         return count;
     }
@@ -412,36 +429,109 @@ class HakoiriPuzzleUI {
             const row = Math.floor(index / 4);
             const col = index % 4;
             const pieceId = this.board[row][col];
+            const piece = this.pieceProperties[pieceId];
             
-            // ピースIDをセット
-            cell.dataset.pieceId = pieceId;
+            // クラスをリセット
+            cell.className = 'board-cell';
+            cell.style.background = '';
+            cell.textContent = '';
             
-            // ピース名を表示
+            // 目標セルマーカーを再追加
+            if ((row === 3 || row === 4) && (col === 1 || col === 2)) {
+                cell.classList.add('goal-cell');
+            }
+            
             if (pieceId === 0) {
-                cell.textContent = '';
-            } else if (this.pieceProperties[pieceId]) {
-                cell.textContent = this.pieceProperties[pieceId].name;
-            } else {
-                cell.textContent = pieceId;
+                cell.classList.add('empty');
+            } else if (piece) {
+                cell.classList.add('piece');
+                cell.style.background = piece.color;
+                
+                // ピース名を表示（中央のセルのみ）
+                if (this.isPieceCenterCell(row, col, pieceId)) {
+                    cell.textContent = piece.name;
+                    cell.classList.add('piece-center');
+                    
+                    if (pieceId === 1) { // MP
+                        cell.classList.add('main-piece', 'large-piece');
+                    }
+                }
+            }
+        });
+        
+        // ピースカウントを更新
+        this.updatePieceCounts();
+    }
+    
+    isPieceCenterCell(row, col, pieceId) {
+        const piece = this.pieceProperties[pieceId];
+        if (!piece) return false;
+        
+        // ピースの左上位置を見つける
+        let topRow = row, leftCol = col;
+        for (let r = 0; r <= row; r++) {
+            for (let c = 0; c <= col; c++) {
+                if (this.board[r][c] === pieceId) {
+                    topRow = Math.min(topRow, r);
+                    leftCol = Math.min(leftCol, c);
+                }
+            }
+        }
+        
+        // 中央位置を計算
+        const centerRow = topRow + Math.floor(piece.height / 2);
+        const centerCol = leftCol + Math.floor(piece.width / 2);
+        
+        return row === centerRow && col === centerCol;
+    }
+    
+    updatePieceCounts() {
+        // 各形状のカウントを更新
+        const counts = {
+            horizontal: this.getShapeCount('horizontal'),
+            vertical: this.getShapeCount('vertical'),
+            square: this.getShapeCount('square')
+        };
+        
+        document.querySelectorAll('.piece-item').forEach(item => {
+            const shape = item.dataset.shape;
+            const countElement = item.querySelector('.piece-count');
+            
+            if (countElement && counts[shape] !== undefined) {
+                const maxCount = this.shapeDefinitions[shape].maxCount;
+                countElement.textContent = `${counts[shape]}/${maxCount}`;
+                
+                if (counts[shape] >= maxCount) {
+                    item.classList.add('max-reached');
+                } else {
+                    item.classList.remove('max-reached');
+                }
             }
         });
     }
     
     resetBoard() {
-        if (this.solutionAvailable) {
-            this.showMessage('解の表示中は盤面をリセットできません', 'warning');
-            return;
-        }
-        
-        this.board = Array(5).fill(null).map(() => Array(4).fill(0));
-        this.renderBoard();
-        
-        // ピース選択を「空」に戻す
-        document.querySelectorAll('.piece-item').forEach(item => item.classList.remove('selected'));
-        document.querySelector('[data-shape="empty"]').classList.add('selected');
+        // 選択を空に戻す
+        document.querySelectorAll('.piece-item').forEach(p => p.classList.remove('selected'));
+        document.querySelector('.piece-item[data-shape="empty"]').classList.add('selected');
         this.selectedShape = 'empty';
         
-        this.showMessage('盤面をリセットしました', 'info');
+        this.currentStep = 0;
+        this.totalSteps = 0;
+        this.solutionAvailable = false;
+        
+        // ピースIDカウンターをリセット
+        this.nextPieceIds = {
+            main: 1,
+            horizontal: 2,
+            vertical: 6,
+            square: 10
+        };
+        
+        // デフォルトの盤面を復元
+        this.loadDefaultBoard();
+        this.hideStepControls();
+        this.clearMessage();
     }
     
     async solvePuzzle() {
@@ -452,16 +542,13 @@ class HakoiriPuzzleUI {
             const initResponse = await fetch('/api/initialize', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ 
-                    board: this.board,
-                    session_id: this.sessionId
-                })
+                body: JSON.stringify({ board: this.board })
             });
             const initData = await initResponse.json();
             
             if (!initData.success) {
                 this.stopProgressIndicator();
-                this.showMessage('初期化に失敗しました: ' + initData.error, 'error');
+                this.showMessage('初期化に失敗しました: ' + initData.error + ' [クリックで閉じる]', 'error', false);
                 return;
             }
             
@@ -477,74 +564,36 @@ class HakoiriPuzzleUI {
                 this.startRealTimeProgress();
             } else {
                 this.stopProgressIndicator();
-                this.showMessage('解決開始に失敗しました: ' + solveData.error, 'error');
+                this.showMessage('解決開始に失敗しました: ' + solveData.error + ' [クリックで閉じる]', 'error', false);
             }
             
         } catch (error) {
             this.stopProgressIndicator();
-            this.showMessage('エラーが発生しました: ' + error.message, 'error');
+            this.showMessage('エラーが発生しました: ' + error.message + ' [クリックで閉じる]', 'error', false);
         }
     }
     
     async stopSolving() {
         try {
+            // 中止リクエスト送信
             const response = await fetch('/api/stop', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: this.sessionId })
+                headers: { 'Content-Type': 'application/json' }
             });
             
             if (response.ok) {
-                this.showMessage('探索を中止しました', 'info');
+                // EventSourceを閉じる
+                if (this.progressEventSource) {
+                    this.progressEventSource.close();
+                    this.progressEventSource = null;
+                }
+                
+                this.stopProgressIndicator();
+                this.showMessage('探索を中止しました', 'warning');
             }
         } catch (error) {
-            console.error('Stop request failed:', error);
-        }
-        
-        this.stopProgressIndicator();
-    }
-    
-    startProgressIndicator() {
-        this.startTime = Date.now();
-        this.startTimer();
-        
-        // ボタンの表示を切り替え
-        document.getElementById('solve-puzzle').style.display = 'none';
-        document.getElementById('stop-puzzle').style.display = 'inline-block';
-        
-        // 統計値をリセット
-        document.getElementById('explored-count').textContent = '0';
-        document.getElementById('current-moves').textContent = '0';
-        document.getElementById('estimated-remaining').textContent = '-';
-    }
-    
-    stopProgressIndicator() {
-        this.stopTimer();
-        
-        // ボタンの表示を元に戻す
-        document.getElementById('solve-puzzle').style.display = 'inline-block';
-        document.getElementById('stop-puzzle').style.display = 'none';
-        
-        // 進捗受信を停止
-        if (this.progressEventSource) {
-            this.progressEventSource.close();
-            this.progressEventSource = null;
-        }
-    }
-    
-    startTimer() {
-        this.timerInterval = setInterval(() => {
-            if (this.startTime) {
-                const elapsed = Math.floor((Date.now() - this.startTime) / 1000);
-                document.getElementById('elapsed-time').textContent = `${elapsed}秒`;
-            }
-        }, 1000);
-    }
-    
-    stopTimer() {
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
+            console.error('中止エラー:', error);
+            this.showMessage('中止処理でエラーが発生しました', 'error');
         }
     }
     
@@ -583,12 +632,12 @@ class HakoiriPuzzleUI {
             // ハートビート（何もしない）
         } else if (data.error) {
             this.stopProgressIndicator();
-            this.showMessage('進捗取得エラー: ' + data.error, 'error');
+            this.showMessage('進捗取得エラー: ' + data.error, 'error', false);
         }
     }
     
     updateRealTimeProgress(data) {
-        // 探索件数を更新
+        // 探索件数を更新（重複チェック）
         const exploredCountElement = document.getElementById('explored-count');
         if (exploredCountElement) {
             const countText = `${data.explored_count.toLocaleString()}`;
@@ -599,7 +648,7 @@ class HakoiriPuzzleUI {
             }
         }
         
-        // 現在手数を更新
+        // 現在手数を更新（重複チェック）
         const currentMovesElement = document.getElementById('current-moves');
         if (currentMovesElement) {
             const movesText = `${data.current_moves}`;
@@ -610,7 +659,7 @@ class HakoiriPuzzleUI {
             }
         }
         
-        // 推定残り手数を更新
+        // 推定残り手数を更新（重複チェック）
         const estimatedRemainingElement = document.getElementById('estimated-remaining');
         if (estimatedRemainingElement) {
             const remainingText = `${data.estimated_remaining}`;
@@ -620,95 +669,243 @@ class HakoiriPuzzleUI {
                 setTimeout(() => estimatedRemainingElement.classList.remove('updating'), 300);
             }
         }
+        
+        // 経過時間を更新
+        this.updateElapsedTime();
     }
     
     handleFinalResult(data) {
+        // EventSourceを閉じる
+        if (this.progressEventSource) {
+            this.progressEventSource.close();
+            this.progressEventSource = null;
+        }
+        
         this.stopProgressIndicator();
         
-        if (data.solved) {
-            // 解法成功
-            this.solutionData = data.solution;
+        if (data.success) {
             this.totalSteps = data.total_steps;
             this.currentStep = 0;
             this.solutionAvailable = true;
             
-            this.showMessage(`解法が見つかりました！(${data.total_steps - 1}手)`, 'success');
+            // ステップコントロールを表示
             this.showStepControls();
+            
+            // 最初のステップを表示
             this.displayStep(0);
+            
+            this.showMessage(`解決しました！手数: ${data.total_steps} [クリックで閉じる]`, 'success', false);
+            this.triggerCelebration();
         } else {
-            // 解法失敗
-            this.showMessage(data.message || '解が見つかりませんでした', 'error');
+            this.showMessage('解が見つかりませんでした [クリックで閉じる]', 'error', false);
+        }
+    }
+    
+    startProgressIndicator() {
+        // 進捗表示を開始
+        const progressText = document.getElementById('progress-text');
+        const progressTitle = document.getElementById('progress-title');
+        const solveButton = document.getElementById('solve-puzzle');
+        const stopButton = document.getElementById('stop-solving');
+        
+        if (progressText) progressText.style.display = 'block';
+        if (progressTitle) progressTitle.textContent = '探索中...';
+        if (solveButton) {
+            solveButton.style.display = 'none';
+        }
+        if (stopButton) {
+            stopButton.style.display = 'inline-block';
+        }
+        
+        // 統計値をリセット
+        this.resetProgressStats();
+        
+        // 開始時間を記録
+        this.startTime = Date.now();
+        this.progressTimer = setInterval(() => this.updateElapsedTime(), 1000);
+    }
+    
+    stopProgressIndicator() {
+        const progressText = document.getElementById('progress-text');
+        const progressTitle = document.getElementById('progress-title');
+        const solveButton = document.getElementById('solve-puzzle');
+        const stopButton = document.getElementById('stop-solving');
+        
+        if (progressText) progressText.style.display = 'none';
+        if (progressTitle) progressTitle.textContent = 'パズル操作';
+        if (solveButton) {
+            solveButton.style.display = 'inline-block';
+        }
+        if (stopButton) {
+            stopButton.style.display = 'none';
+        }
+        
+        if (this.progressTimer) {
+            clearInterval(this.progressTimer);
+            this.progressTimer = null;
+        }
+    }
+    
+    resetProgressStats() {
+        const stats = ['explored-count', 'current-moves', 'estimated-remaining', 'elapsed-time'];
+        stats.forEach(id => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = '-';
+        });
+    }
+    
+    updateElapsedTime() {
+        if (!this.startTime) return;
+        
+        const elapsed = Date.now() - this.startTime;
+        const seconds = Math.floor(elapsed / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        
+        const timeText = `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+        const elapsedTimeElement = document.getElementById('elapsed-time');
+        if (elapsedTimeElement) {
+            elapsedTimeElement.textContent = timeText;
+        }
+    }
+    
+    async nextStep() {
+        if (!this.solutionAvailable) return;
+        
+        if (this.currentStep < this.totalSteps) {
+            this.currentStep++;
+            await this.displayStep(this.currentStep);
+        } else {
+            this.showMessage('最終ステップに到達しています', 'info');
+        }
+    }
+    
+    async prevStep() {
+        if (!this.solutionAvailable) return;
+        
+        if (this.currentStep > 0) {
+            this.currentStep--;
+            await this.displayStep(this.currentStep);
+        } else {
+            this.showMessage('初期ステップです', 'info');
+        }
+    }
+    
+    async displayStep(step) {
+        try {
+            const response = await fetch(`/api/get_step/${step}`);
+            const data = await response.json();
+            
+            if (data.success) {
+                this.board = data.board;
+                this.renderBoard();
+                
+                // ステップ情報を更新
+                this.updateStepInfo(step, data.total_steps, data.move);
+            } else {
+                this.showMessage('ステップの取得に失敗しました: ' + data.error, 'error');
+            }
+        } catch (error) {
+            this.showMessage('エラーが発生しました: ' + error.message, 'error');
+        }
+    }
+    
+    updateStepInfo(currentStep, totalSteps, move) {
+        const stepCounter = document.getElementById('step-counter-main');
+        const moveDescription = document.getElementById('move-description-main');
+        
+        if (stepCounter) {
+            stepCounter.textContent = `ステップ: ${currentStep} / ${totalSteps}`;
+        }
+        
+        if (moveDescription) {
+            if (currentStep === 0) {
+                moveDescription.textContent = '初期状態';
+            } else {
+                moveDescription.textContent = move || '移動情報なし';
+            }
         }
     }
     
     showStepControls() {
-        const stepControls = document.getElementById('step-controls');
-        stepControls.style.display = 'flex';
-        this.updateStepDisplay();
+        const stepControls = document.getElementById('step-controls-main');
+        if (stepControls) {
+            stepControls.style.display = 'block';
+        }
     }
     
     hideStepControls() {
-        const stepControls = document.getElementById('step-controls');
-        stepControls.style.display = 'none';
-    }
-    
-    nextStep() {
-        if (this.currentStep < this.totalSteps - 1) {
-            this.currentStep++;
-            this.displayStep(this.currentStep);
-            this.updateStepDisplay();
+        const stepControls = document.getElementById('step-controls-main');
+        if (stepControls) {
+            stepControls.style.display = 'none';
         }
-    }
-    
-    prevStep() {
-        if (this.currentStep > 0) {
-            this.currentStep--;
-            this.displayStep(this.currentStep);
-            this.updateStepDisplay();
-        }
-    }
-    
-    displayStep(step) {
-        if (this.solutionData && step < this.solutionData.length) {
-            this.board = this.solutionData[step];
-            this.renderBoard();
-        }
-    }
-    
-    updateStepDisplay() {
-        const stepDisplay = document.getElementById('step-display');
-        stepDisplay.textContent = `${this.currentStep + 1} / ${this.totalSteps}`;
-        
-        // ボタンの有効/無効を制御
-        document.getElementById('prev-step-main').disabled = this.currentStep === 0;
-        document.getElementById('next-step-main').disabled = this.currentStep === this.totalSteps - 1;
     }
     
     showMessage(message, type = 'info', autoHide = true) {
-        const messageArea = document.getElementById('message-area');
-        const messageElement = document.createElement('div');
-        messageElement.className = `message ${type}`;
-        messageElement.textContent = message;
+        const statusElement = document.getElementById('status-message');
+        if (!statusElement) return;
         
-        messageArea.appendChild(messageElement);
+        statusElement.textContent = message;
+        statusElement.className = `status-message ${type}`;
+        statusElement.style.display = 'block';
         
-        // クリックで閉じる
-        messageElement.addEventListener('click', () => {
-            messageElement.remove();
-        });
-        
-        // 自動で閉じる
-        if (autoHide) {
-            setTimeout(() => {
-                if (messageElement.parentNode) {
-                    messageElement.remove();
-                }
-            }, 5000);
+        // クリックで閉じる機能
+        if (!autoHide) {
+            statusElement.style.cursor = 'pointer';
+            statusElement.onclick = () => this.clearMessage();
+        } else {
+            statusElement.style.cursor = 'default';
+            statusElement.onclick = null;
         }
+        
+        if (autoHide) {
+            setTimeout(() => this.clearMessage(), 3000);
+        }
+    }
+    
+    clearMessage() {
+        const statusElement = document.getElementById('status-message');
+        if (statusElement) {
+            statusElement.style.display = 'none';
+            statusElement.onclick = null;
+        }
+    }
+    
+    triggerCelebration() {
+        // 紙吹雪エフェクト
+        this.createConfetti();
+        
+        // 成功音やアニメーションを追加する場合はここに
+    }
+    
+    createConfetti() {
+        const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#feca57'];
+        const confettiContainer = document.createElement('div');
+        confettiContainer.className = 'celebration-container';
+        document.body.appendChild(confettiContainer);
+        
+        for (let i = 0; i < 50; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + '%';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.width = confetti.style.height = Math.random() * 10 + 5 + 'px';
+            confetti.style.position = 'absolute';
+            confetti.style.animation = `confetti-fall ${Math.random() * 3 + 2}s linear forwards`;
+            
+            confettiContainer.appendChild(confetti);
+        }
+        
+        // 5秒後に削除
+        setTimeout(() => {
+            if (confettiContainer.parentNode) {
+                confettiContainer.parentNode.removeChild(confettiContainer);
+            }
+        }, 5000);
     }
 }
 
-// アプリケーション開始
+// パズルUIを初期化
 document.addEventListener('DOMContentLoaded', () => {
     new HakoiriPuzzleUI();
 });

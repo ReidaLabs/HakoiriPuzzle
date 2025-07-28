@@ -1,4 +1,5 @@
 import heapq
+from copy import deepcopy
 
 # ピースのID定義
 EM = 0  # 空きマス
@@ -47,13 +48,13 @@ class HakoiriPuzzle:
         self.GOAL_MAIN_PIECE_COL_START = 1
         self.GOAL_MAIN_PIECE_COL_END = 1
         
-        # デフォルトの初期盤面
+        # デフォルトの初期盤面（確実に解ける標準配置・約30手）
         self.initial_board = [
-            [V1, MP, MP, S1],
-            [V1, MP, MP, S2], 
-            [V2, V3, V4, S3],
-            [V2, V3, V4, S4],
-            [EM, H1, H1, EM]
+            [S3, H3, H3, S4],
+            [V1, MP, MP, V2],
+            [V1, MP, MP, V2], 
+            [S1, H1, H1, S2],
+            [EM, H2, H2, EM]
         ]
         
     def set_initial_board(self, board):
@@ -98,111 +99,87 @@ class HakoiriPuzzle:
             if current_pos is None:
                 continue
                 
+            prop = PIECE_PROPERTIES[piece_id]
+            width, height = prop['width'], prop['height']
             current_r, current_c = current_pos
-            width = PIECE_PROPERTIES[piece_id]['width']
-            height = PIECE_PROPERTIES[piece_id]['height']
-            piece_name = PIECE_PROPERTIES[piece_id]['name']
             
-            for dr, dc, direction_name in [(0, 1, "右"), (0, -1, "左"), (1, 0, "下"), (-1, 0, "上")]:
+            # 上下左右の移動を試す
+            directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            for dr, dc in directions:
                 new_r, new_c = current_r + dr, current_c + dc
                 
-                if self.is_valid_move(board, piece_id, (current_r, current_c), (new_r, new_c), width, height):
-                    new_board = [row[:] for row in board]
+                if self.is_valid_move(board, piece_id, current_pos, (new_r, new_c), width, height):
+                    new_board = self.apply_move(board, piece_id, current_pos, (new_r, new_c), width, height)
+                    move_description = f"{prop['name']}を({current_r},{current_c})から({new_r},{new_c})へ移動"
+                    moves.append((new_board, move_description))
                     
-                    # 元の場所を空にする
-                    for r_offset in range(height):
-                        for c_offset in range(width):
-                            new_board[current_r + r_offset][current_c + c_offset] = EM
-                            
-                    # 新しい場所にピースを置く
-                    for r_offset in range(height):
-                        for c_offset in range(width):
-                            new_board[new_r + r_offset][new_c + c_offset] = piece_id
-                            
-                    moves.append((new_board, f"ピース{piece_name}を{direction_name}に移動"))
         return moves
         
-    def is_goal(self, board):
-        """現在の盤面がゴール状態かチェック"""
-        main_piece_pos = self.find_piece_top_left(board, MP)
-        if not main_piece_pos:
-            return False
-            
-        main_r, main_c = main_piece_pos
-        return (main_r >= self.GOAL_MAIN_PIECE_ROW and
-                self.GOAL_MAIN_PIECE_COL_START <= main_c <= self.GOAL_MAIN_PIECE_COL_END)
+    def apply_move(self, board, piece_id, old_pos, new_pos, width, height):
+        """ピースを移動させた新しい盤面を生成"""
+        new_board = deepcopy(board)
+        old_r, old_c = old_pos
+        new_r, new_c = new_pos
+        
+        # 古い位置をクリア
+        for r_offset in range(height):
+            for c_offset in range(width):
+                new_board[old_r + r_offset][old_c + c_offset] = EM
                 
-    def calculate_heuristic(self, board):
-        """ヒューリスティック関数"""
-        main_piece_pos = self.find_piece_top_left(board, MP)
-        if not main_piece_pos:
+        # 新しい位置に配置
+        for r_offset in range(height):
+            for c_offset in range(width):
+                new_board[new_r + r_offset][new_c + c_offset] = piece_id
+                
+        return new_board
+        
+    def is_goal(self, board):
+        """ゴール判定：箱入り娘が目標位置にあるかチェック"""
+        goal_r, goal_c = self.GOAL_MAIN_PIECE_ROW, self.GOAL_MAIN_PIECE_COL_START
+        return (board[goal_r][goal_c] == MP and board[goal_r][goal_c + 1] == MP and
+                board[goal_r + 1][goal_c] == MP and board[goal_r + 1][goal_c + 1] == MP)
+                
+    def calculate_manhattan_distance(self, board):
+        """マンハッタン距離ヒューリスティック"""
+        mp_pos = self.find_piece_top_left(board, MP)
+        if mp_pos is None:
             return float('inf')
             
-        main_r, main_c = main_piece_pos
-        main_h = PIECE_PROPERTIES[MP]['height']
-        main_w = PIECE_PROPERTIES[MP]['width']
-        
-        h1 = max(0, self.GOAL_MAIN_PIECE_ROW - main_r)
-        
-        blocks_below_main = 0
-        if main_r + main_h < self.BOARD_HEIGHT:
-            for c_offset in range(main_w):
-                if board[main_r + main_h][main_c + c_offset] != EM:
-                    if board[main_r + main_h][main_c + c_offset] != MP:
-                        blocks_below_main += 1
-                        
-        blocks_in_goal_path = 0
-        for r in range(main_r + main_h, self.BOARD_HEIGHT):
-            for c in range(main_c, main_c + main_w):
-                if board[r][c] != EM and board[r][c] != MP:
-                    blocks_in_goal_path += 1
-                    
-        if not (self.GOAL_MAIN_PIECE_COL_START <= main_c <= self.GOAL_MAIN_PIECE_COL_END):
-            target_col = self.GOAL_MAIN_PIECE_COL_START
-            if main_c < target_col:
-                for r_offset in range(main_h):
-                    for c in range(main_c + main_w, target_col + main_w):
-                        if c < self.BOARD_WIDTH and board[main_r + r_offset][c] != EM:
-                            blocks_in_goal_path += 1
-            elif main_c > target_col:
-                for r_offset in range(main_h):
-                    for c in range(target_col, main_c):
-                        if c >= 0 and board[main_r + r_offset][c] != EM:
-                            blocks_in_goal_path += 1
-                            
-        return h1 + blocks_below_main + blocks_in_goal_path
-        
+        goal_r, goal_c = self.GOAL_MAIN_PIECE_ROW, self.GOAL_MAIN_PIECE_COL_START
+        current_r, current_c = mp_pos
+        return abs(current_r - goal_r) + abs(current_c - goal_c)
+
 class State:
-    def __init__(self, board, g_cost, puzzle, parent=None, move=None):
+    def __init__(self, board, g_cost, puzzle, parent=None, move=''):
         self.board = board
         self.g_cost = g_cost
+        self.h_cost = puzzle.calculate_manhattan_distance(board)
+        self.f_cost = g_cost + self.h_cost
         self.parent = parent
         self.move = move
-        self.h_cost = puzzle.calculate_heuristic(board)
-        self.f_cost = self.g_cost + self.h_cost
         
     def __lt__(self, other):
-        return self.f_cost < other.f_cost
+        if self.f_cost != other.f_cost:
+            return self.f_cost < other.f_cost
+        return self.h_cost < other.h_cost
         
     def __hash__(self):
-        return hash(tuple(map(tuple, self.board)))
-        
-    def __eq__(self, other):
-        return self.board == other.board
+        return hash(tuple(tuple(row) for row in self.board))
 
 class HakoiriSolver:
     def __init__(self, puzzle):
         self.puzzle = puzzle
         self.progress_callback = None
-        self.stop_flag_func = None
+        self.stop_flag_function = None
+        self.total_explored = 0
         
     def set_progress_callback(self, callback):
-        """進捗表示用のコールバック関数を設定"""
+        """進捗コールバック関数を設定"""
         self.progress_callback = callback
         
-    def set_stop_flag_function(self, stop_flag_func):
-        """中止フラグをチェックする関数を設定"""
-        self.stop_flag_func = stop_flag_func
+    def set_stop_flag_function(self, stop_func):
+        """中止フラグチェック関数を設定"""
+        self.stop_flag_function = stop_func
         
     def solve_astar(self):
         """A*アルゴリズムで解を探索（Web進捗表示付き）"""
@@ -216,11 +193,12 @@ class HakoiriSolver:
         
         while open_set:
             # 中止フラグをチェック
-            if self.stop_flag_func and self.stop_flag_func():
-                return None  # 中止された場合はNoneを返す
+            if self.stop_flag_function and self.stop_flag_function():
+                break
                 
             f_cost, current_state = heapq.heappop(open_set)
             explored_count += 1
+            self.total_explored = explored_count
             
             # Web画面への進捗表示（コンソールには出力しない）
             if explored_count % progress_interval == 0 and self.progress_callback:
@@ -255,12 +233,15 @@ class HakoiriSolver:
             for next_board, move_description in self.puzzle.get_all_possible_moves(current_state.board):
                 next_g_cost = current_state.g_cost + 1
                 next_state = State(next_board, next_g_cost, self.puzzle, current_state, move_description)
+                next_hash = hash(next_state)
                 
-                if hash(next_state) not in closed_set or next_g_cost < closed_set[hash(next_state)]:
-                    closed_set[hash(next_state)] = next_g_cost
-                    heapq.heappush(open_set, (next_state.f_cost, next_state))
+                if next_hash in closed_set and next_g_cost >= closed_set[next_hash]:
+                    continue
+                    
+                closed_set[next_hash] = next_g_cost
+                heapq.heappush(open_set, (next_state.f_cost, next_state))
         
-        # 解が見つからない場合もWeb画面に通知
+        # 解が見つからなかった場合
         if self.progress_callback:
             final_info = {
                 'solved': False,
