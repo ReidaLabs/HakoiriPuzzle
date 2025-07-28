@@ -101,6 +101,9 @@ node_modules/
 # Archive folder (development files not for GitHub)
 archive/
 
+# Webapp folder (restored from cache, not for GitHub)
+webapp/
+
 # Temporary files
 *.txt
 *.tmp
