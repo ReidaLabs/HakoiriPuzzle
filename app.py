@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, jsonify, session, Response
 from hakoiri_puzzle import HakoiriPuzzle, HakoiriSolver, PIECE_PROPERTIES
 import json
@@ -7,7 +8,7 @@ import queue
 import uuid
 
 app = Flask(__name__)
-app.secret_key = 'hakoiri-musume-puzzle-secret-key'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-key-change-in-production')
 
 # グローバル進捗キューと解結果保存
 progress_queues = {}
