@@ -10,19 +10,31 @@ import uuid
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-key-change-in-production')
 
+<<<<<<< HEAD
 # グローバル進捗キューと解結果保存
+=======
+# グローバル進捗キューと解結果保孁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
 progress_queues = {}
 solution_cache = {}
 stop_flags = {}  # 探索中止フラグ
 
 @app.route('/')
 def index():
+<<<<<<< HEAD
     """メインページを表示"""
+=======
+    """メインペ�Eジを表示"""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     return render_template('index.html')
 
 @app.route('/api/initialize', methods=['POST'])
 def initialize_puzzle():
+<<<<<<< HEAD
     """パズルを初期化"""
+=======
+    """パズルを�E期化"""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     data = request.get_json()
     board = data.get('board')
     
@@ -30,7 +42,11 @@ def initialize_puzzle():
     if board:
         puzzle.set_initial_board(board)
     
+<<<<<<< HEAD
     # セッションにパズルの初期状態を保存
+=======
+    # セチE��ョンにパズルの初期状態を保孁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     session['initial_board'] = puzzle.initial_board
     session['current_step'] = 0
     session['solution'] = None
@@ -42,13 +58,21 @@ def initialize_puzzle():
     })
 
 def create_progress_callback(session_id):
+<<<<<<< HEAD
     """進捗コールバック関数を作成"""
+=======
+    """進捗コールバック関数を作�E"""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     def progress_callback(info):
         if session_id in progress_queues:
             try:
                 progress_queues[session_id].put_nowait(info)
             except queue.Full:
+<<<<<<< HEAD
                 # キューが満杯の場合は古いデータを1つ削除してから追加
+=======
+                # キューが満杯の場合�E古ぁE��ータめEつ削除してから追加
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
                 try:
                     progress_queues[session_id].get_nowait()
                     progress_queues[session_id].put_nowait(info)
@@ -58,17 +82,29 @@ def create_progress_callback(session_id):
 
 @app.route('/api/solve', methods=['POST'])
 def solve_puzzle():
+<<<<<<< HEAD
     """パズルを解く（リアルタイム進捗表示付き）"""
     if 'initial_board' not in session:
         return jsonify({'success': False, 'error': 'パズルが初期化されていません'})
     
     # ユニークなセッションIDを生成
+=======
+    """パズルを解く（リアルタイム進捗表示付き�E�E""
+    if 'initial_board' not in session:
+        return jsonify({'success': False, 'error': 'パズルが�E期化されてぁE��せん'})
+    
+    # ユニ�EクなセチE��ョンIDを生戁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     session_id = str(uuid.uuid4())
     session['task_id'] = session_id
     progress_queues[session_id] = queue.Queue(maxsize=50)
     stop_flags[session_id] = False
     
+<<<<<<< HEAD
     # 初期盤面をコピー（バックグラウンドスレッド用）
+=======
+    # 初期盤面をコピ�E�E�バチE��グラウンドスレチE��用�E�E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     initial_board = [row[:] for row in session['initial_board']]
     
     puzzle = HakoiriPuzzle()
@@ -77,7 +113,11 @@ def solve_puzzle():
     solver = HakoiriSolver(puzzle)
     solver.set_progress_callback(create_progress_callback(session_id))
     
+<<<<<<< HEAD
     # 中止フラグチェック関数をソルバーに設定
+=======
+    # 中止フラグチェチE��関数をソルバ�Eに設宁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     solver.set_stop_flag_function(lambda: stop_flags.get(session_id, False))
     
     def solve_in_background():
@@ -85,7 +125,11 @@ def solve_puzzle():
             solution = solver.solve_astar()
             
             if solution:
+<<<<<<< HEAD
                 # 解をグローバルキャッシュに保存
+=======
+                # 解をグローバルキャチE��ュに保孁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
                 solution_data = [{'board': state.board, 'move': state.move} for state in solution]
                 solution_cache[session_id] = {
                     'solution': solution_data,
@@ -106,7 +150,11 @@ def solve_puzzle():
                     'total_explored': getattr(solver, 'total_explored', 0)
                 }
                 
+<<<<<<< HEAD
             # 安全にキューに追加
+=======
+            # 安�Eにキューに追加
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
             if session_id in progress_queues:
                 try:
                     progress_queues[session_id].put_nowait(final_result)
@@ -159,7 +207,11 @@ def get_progress():
     session_id = session.get('task_id')
     if not session_id or session_id not in progress_queues:
         def error_stream():
+<<<<<<< HEAD
             yield f"data: {json.dumps({'error': 'セッションが見つかりません'})}\n\n"
+=======
+            yield f"data: {json.dumps({'error': 'セチE��ョンが見つかりません'})}\n\n"
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         response = Response(error_stream(), mimetype='text/event-stream')
         response.headers['Cache-Control'] = 'no-cache'
         response.headers['Connection'] = 'keep-alive'
@@ -169,10 +221,17 @@ def get_progress():
         try:
             while True:
                 try:
+<<<<<<< HEAD
                     # 進捗データを取得（5秒タイムアウト）
                     progress_data = progress_queues[session_id].get(timeout=5)
                     
                     # 進捗データの種類に応じて処理
+=======
+                    # 進捗データを取得！E秒タイムアウト！E
+                    progress_data = progress_queues[session_id].get(timeout=5)
+                    
+                    # 進捗データの種類に応じて処琁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
                     if 'type' in progress_data:
                         event_data = progress_data
                     else:
@@ -186,12 +245,20 @@ def get_progress():
                     
                     yield f"data: {json.dumps(event_data)}\n\n"
                     
+<<<<<<< HEAD
                     # 最終結果の場合は終了
+=======
+                    # 最終結果の場合�E終亁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
                     if event_data.get('type') == 'final_result':
                         break
                         
                 except queue.Empty:
+<<<<<<< HEAD
                     # タイムアウト時はハートビートを送信
+=======
+                    # タイムアウト時はハ�Eトビートを送信
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
                     if session_id in progress_queues:
                         yield f"data: {json.dumps({'type': 'heartbeat'})}\n\n"
                     else:
@@ -200,7 +267,11 @@ def get_progress():
         except Exception as e:
             yield f"data: {json.dumps({'error': str(e)})}\n\n"
         finally:
+<<<<<<< HEAD
             # クリーンアップ
+=======
+            # クリーンアチE�E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
             if session_id in progress_queues:
                 del progress_queues[session_id]
             if session_id in stop_flags:
@@ -213,10 +284,17 @@ def get_progress():
 
 @app.route('/api/get_step/<int:step>')
 def get_step(step):
+<<<<<<< HEAD
     """指定されたステップの状態を取得"""
     task_id = session.get('task_id')
     if not task_id or task_id not in solution_cache:
         return jsonify({'success': False, 'error': '解が見つかっていません'})
+=======
+    """持E��されたスチE��プ�E状態を取征E""
+    task_id = session.get('task_id')
+    if not task_id or task_id not in solution_cache:
+        return jsonify({'success': False, 'error': '解が見つかってぁE��せん'})
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     
     solution_data = solution_cache[task_id]
     solution = solution_data['solution']
@@ -230,6 +308,7 @@ def get_step(step):
             'total_steps': len(solution) - 1
         })
     else:
+<<<<<<< HEAD
         return jsonify({'success': False, 'error': '無効なステップ番号です'})
 
 @app.route('/api/next_step')
@@ -238,6 +317,16 @@ def next_step():
     task_id = session.get('task_id')
     if not task_id or task_id not in solution_cache:
         return jsonify({'success': False, 'error': '解が見つかっていません'})
+=======
+        return jsonify({'success': False, 'error': '無効なスチE��プ番号でぁE})
+
+@app.route('/api/next_step')
+def next_step():
+    """次のスチE��プに進む"""
+    task_id = session.get('task_id')
+    if not task_id or task_id not in solution_cache:
+        return jsonify({'success': False, 'error': '解が見つかってぁE��せん'})
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     
     solution_data = solution_cache[task_id]
     current_step = solution_data['current_step']
@@ -258,16 +347,27 @@ def next_step():
     else:
         return jsonify({
             'success': False, 
+<<<<<<< HEAD
             'error': '最終ステップに到達しています',
+=======
+            'error': '最終スチE��プに到達してぁE��ぁE,
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
             'is_final': True
         })
 
 @app.route('/api/prev_step')
 def prev_step():
+<<<<<<< HEAD
     """前のステップに戻る"""
     task_id = session.get('task_id')
     if not task_id or task_id not in solution_cache:
         return jsonify({'success': False, 'error': '解が見つかっていません'})
+=======
+    """前�EスチE��プに戻めE""
+    task_id = session.get('task_id')
+    if not task_id or task_id not in solution_cache:
+        return jsonify({'success': False, 'error': '解が見つかってぁE��せん'})
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     
     solution_data = solution_cache[task_id]
     current_step = solution_data['current_step']
@@ -281,21 +381,35 @@ def prev_step():
             'success': True,
             'step': current_step,
             'board': solution[current_step]['board'],
+<<<<<<< HEAD
             'move': solution[current_step]['move'] if current_step > 0 else '初期状態',
+=======
+            'move': solution[current_step]['move'] if current_step > 0 else '初期状慁E,
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
             'total_steps': len(solution) - 1,
             'is_final': False
         })
     else:
         return jsonify({
             'success': False, 
+<<<<<<< HEAD
             'error': '初期ステップです'
+=======
+            'error': '初期スチE��プでぁE
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         })
 
 @app.route('/api/reset')
 def reset_puzzle():
+<<<<<<< HEAD
     """パズルをリセット"""
     task_id = session.get('task_id')
     # 進捗キューとソリューションキャッシュをクリア
+=======
+    """パズルをリセチE��"""
+    task_id = session.get('task_id')
+    # 進捗キューとソリューションキャチE��ュをクリア
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     if task_id:
         if task_id in progress_queues:
             del progress_queues[task_id]
@@ -308,24 +422,42 @@ def reset_puzzle():
 
 @app.route('/api/validate_board', methods=['POST'])
 def validate_board():
+<<<<<<< HEAD
     """盤面の妥当性をチェック"""
+=======
+    """盤面の妥当性をチェチE��"""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     data = request.get_json()
     board = data.get('board')
     
     if not board or len(board) != 5 or any(len(row) != 4 for row in board):
         return jsonify({'success': False, 'error': '盤面のサイズが正しくありません'})
     
+<<<<<<< HEAD
     # 必要なピースがすべて存在するかチェック
+=======
+    # 忁E��なピ�Eスがすべて存在するかチェチE��
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     pieces_count = {}
     for row in board:
         for cell in row:
             pieces_count[cell] = pieces_count.get(cell, 0) + 1
     
+<<<<<<< HEAD
     # 箱入り娘(MP)が4マス存在するかチェック
     if pieces_count.get(1, 0) != 4:  # MP = 1
         return jsonify({'success': False, 'error': '箱入り娘(MP)が正しく配置されていません'})
+=======
+    # 箱入り威EMP)ぁEマス存在するかチェチE��
+    if pieces_count.get(1, 0) != 4:  # MP = 1
+        return jsonify({'success': False, 'error': '箱入り威EMP)が正しく配置されてぁE��せん'})
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
     
     return jsonify({'success': True})
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     app.run(debug=True, port=5000)
+=======
+    app.run(debug=True, port=5000)
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd

@@ -105,9 +105,11 @@ archive/
 webapp/
 
 # Temporary files
-*.txt
 *.tmp
 
 # Session files
 *cookies*
 *session*
+
+.serena
+.claude

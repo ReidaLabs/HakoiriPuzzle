@@ -1,29 +1,29 @@
 import heapq
 from copy import deepcopy
 
-# ピースのID定義
-EM = 0  # 空きマス
-MP = 1  # 箱入り娘
+# ピ�EスのID定義
+EM = 0  # 空き�Eス
+MP = 1  # 箱入り威E
 
-# 横2マスブロック
+# 横2マスブロチE��
 H1 = 2
 H2 = 3
 H3 = 4
 H4 = 5
 
-# 縦2マスブロック
+# 縦2マスブロチE��
 V1 = 6
 V2 = 7
 V3 = 8
 V4 = 9
 
-# 1x1ブロック
+# 1x1ブロチE��
 S1 = 10
 S2 = 11
 S3 = 12
 S4 = 13
 
-# ピースの属性
+# ピ�Eスの属性
 PIECE_PROPERTIES = {
     MP: {'width': 2, 'height': 2, 'name': 'MP', 'color': '#FF6B6B'},
     H1: {'width': 2, 'height': 1, 'name': 'H1', 'color': '#4ECDC4'},
@@ -48,7 +48,11 @@ class HakoiriPuzzle:
         self.GOAL_MAIN_PIECE_COL_START = 1
         self.GOAL_MAIN_PIECE_COL_END = 1
         
+<<<<<<< HEAD
         # デフォルトの初期盤面（確実に解ける標準配置・約30手）
+=======
+        # チE��ォルト�E初期盤面�E�確実に解ける標準�E置・紁E0手！E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         self.initial_board = [
             [S3, H3, H3, S4],
             [V1, MP, MP, V2],
@@ -58,11 +62,11 @@ class HakoiriPuzzle:
         ]
         
     def set_initial_board(self, board):
-        """初期盤面を設定"""
+        """初期盤面を設宁E""
         self.initial_board = board
         
     def find_piece_top_left(self, board, piece_id):
-        """指定されたピースIDの左上隅の座標を見つける"""
+        """持E��されたピ�EスIDの左上隅の座標を見つける"""
         for r in range(self.BOARD_HEIGHT):
             for c in range(self.BOARD_WIDTH):
                 if board[r][c] == piece_id:
@@ -70,7 +74,7 @@ class HakoiriPuzzle:
         return None
         
     def is_valid_move(self, board, piece_id, current_pos, new_pos, width, height):
-        """ピースが新しい位置に移動できるかチェック"""
+        """ピ�Eスが新しい位置に移動できるかチェチE��"""
         new_r, new_c = new_pos
         
         if not (0 <= new_r < self.BOARD_HEIGHT and 0 <= new_c < self.BOARD_WIDTH and
@@ -85,7 +89,7 @@ class HakoiriPuzzle:
         return True
         
     def get_all_possible_moves(self, board):
-        """現在の盤面から有効なすべての移動を生成"""
+        """現在の盤面から有効なすべての移動を生�E"""
         moves = []
         unique_pieces_on_board = set()
         
@@ -103,25 +107,41 @@ class HakoiriPuzzle:
             width, height = prop['width'], prop['height']
             current_r, current_c = current_pos
             
+<<<<<<< HEAD
             # 上下左右の移動を試す
+=======
+            # 上下左右の移動を試ぁE
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
             directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
             for dr, dc in directions:
                 new_r, new_c = current_r + dr, current_c + dc
                 
                 if self.is_valid_move(board, piece_id, current_pos, (new_r, new_c), width, height):
                     new_board = self.apply_move(board, piece_id, current_pos, (new_r, new_c), width, height)
+<<<<<<< HEAD
                     move_description = f"{prop['name']}を({current_r},{current_c})から({new_r},{new_c})へ移動"
+=======
+                    move_description = f"{prop['name']}めE{current_r},{current_c})から({new_r},{new_c})へ移勁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
                     moves.append((new_board, move_description))
                     
         return moves
         
     def apply_move(self, board, piece_id, old_pos, new_pos, width, height):
+<<<<<<< HEAD
         """ピースを移動させた新しい盤面を生成"""
+=======
+        """ピ�Eスを移動させた新しい盤面を生戁E""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         new_board = deepcopy(board)
         old_r, old_c = old_pos
         new_r, new_c = new_pos
         
+<<<<<<< HEAD
         # 古い位置をクリア
+=======
+        # 古ぁE��置をクリア
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         for r_offset in range(height):
             for c_offset in range(width):
                 new_board[old_r + r_offset][old_c + c_offset] = EM
@@ -134,13 +154,21 @@ class HakoiriPuzzle:
         return new_board
         
     def is_goal(self, board):
+<<<<<<< HEAD
         """ゴール判定：箱入り娘が目標位置にあるかチェック"""
+=======
+        """ゴール判定：箱入り娘が目標位置にあるかチェチE��"""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         goal_r, goal_c = self.GOAL_MAIN_PIECE_ROW, self.GOAL_MAIN_PIECE_COL_START
         return (board[goal_r][goal_c] == MP and board[goal_r][goal_c + 1] == MP and
                 board[goal_r + 1][goal_c] == MP and board[goal_r + 1][goal_c + 1] == MP)
                 
     def calculate_manhattan_distance(self, board):
+<<<<<<< HEAD
         """マンハッタン距離ヒューリスティック"""
+=======
+        """マンハッタン距離ヒューリスチE��チE��"""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         mp_pos = self.find_piece_top_left(board, MP)
         if mp_pos is None:
             return float('inf')
@@ -174,15 +202,23 @@ class HakoiriSolver:
         self.total_explored = 0
         
     def set_progress_callback(self, callback):
+<<<<<<< HEAD
         """進捗コールバック関数を設定"""
         self.progress_callback = callback
         
     def set_stop_flag_function(self, stop_func):
         """中止フラグチェック関数を設定"""
+=======
+        """進捗コールバック関数を設宁E""
+        self.progress_callback = callback
+        
+    def set_stop_flag_function(self, stop_func):
+        """中止フラグチェチE��関数を設宁E""
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         self.stop_flag_function = stop_func
         
     def solve_astar(self):
-        """A*アルゴリズムで解を探索（Web進捗表示付き）"""
+        """A*アルゴリズムで解を探索�E�Eeb進捗表示付き�E�E""
         initial_state = State(self.puzzle.initial_board, 0, self.puzzle)
         
         open_set = [(initial_state.f_cost, initial_state)]
@@ -192,7 +228,11 @@ class HakoiriSolver:
         progress_interval = 1000  # 1000回ごとに進捗表示
         
         while open_set:
+<<<<<<< HEAD
             # 中止フラグをチェック
+=======
+            # 中止フラグをチェチE��
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
             if self.stop_flag_function and self.stop_flag_function():
                 break
                 
@@ -200,7 +240,7 @@ class HakoiriSolver:
             explored_count += 1
             self.total_explored = explored_count
             
-            # Web画面への進捗表示（コンソールには出力しない）
+            # Web画面への進捗表示�E�コンソールには出力しなぁE��E
             if explored_count % progress_interval == 0 and self.progress_callback:
                 progress_info = {
                     'explored_count': explored_count,
@@ -241,7 +281,11 @@ class HakoiriSolver:
                 closed_set[next_hash] = next_g_cost
                 heapq.heappush(open_set, (next_state.f_cost, next_state))
         
+<<<<<<< HEAD
         # 解が見つからなかった場合
+=======
+        # 解が見つからなかった場吁E
+>>>>>>> 9614f998bb362e5174d410cd7269833c1dede4bd
         if self.progress_callback:
             final_info = {
                 'solved': False,
