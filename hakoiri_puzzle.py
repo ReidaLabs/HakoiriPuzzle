@@ -48,13 +48,13 @@ class HakoiriPuzzle:
         self.GOAL_MAIN_PIECE_COL_START = 1
         self.GOAL_MAIN_PIECE_COL_END = 1
         
-        # デフォルトの初期盤面（確実に解ける標準配置・約30手）
+        # デフォルトの初期盤面（確実に解ける簡単配置・約15手）
         self.initial_board = [
-            [S3, H3, H3, S4],
-            [V1, MP, MP, V2],
-            [V1, MP, MP, V2], 
-            [S1, H1, H1, S2],
-            [EM, H2, H2, EM]
+            [EM, EM, EM, EM],
+            [EM, MP, MP, EM],
+            [EM, MP, MP, EM], 
+            [EM, H1, H1, EM],
+            [EM, EM, EM, EM]
         ]
         
     def set_initial_board(self, board):
@@ -246,6 +246,92 @@ class HakoiriSolver:
             final_info = {
                 'solved': False,
                 'total_explored': explored_count
+            }
+            self.progress_callback(final_info)
+            
+        return None
+        
+    def solve_astar_memory_limited(self, max_explored=200000, max_memory_states=30000):
+        """メモリ制限付きA*アルゴリズム"""
+        initial_state = State(self.puzzle.initial_board, 0, self.puzzle)
+        
+        open_set = [(initial_state.f_cost, initial_state)]
+        closed_set = {hash(initial_state): initial_state.g_cost}
+        
+        explored_count = 0
+        progress_interval = 1000
+        
+        while open_set and explored_count < max_explored:
+            # 中止フラグをチェック
+            if self.stop_flag_function and self.stop_flag_function():
+                break
+            
+            # メモリ制限チェック：closed_setサイズ制限
+            if len(closed_set) > max_memory_states:
+                # 古い状態を削除（簡易メモリ管理）
+                closed_set.clear()
+                if self.progress_callback:
+                    progress_info = {
+                        'explored_count': explored_count,
+                        'current_moves': 0,
+                        'estimated_remaining': 0,
+                        'memory_reset': True
+                    }
+                    self.progress_callback(progress_info)
+                
+            f_cost, current_state = heapq.heappop(open_set)
+            explored_count += 1
+            self.total_explored = explored_count
+            
+            # Web画面への進捗表示
+            if explored_count % progress_interval == 0 and self.progress_callback:
+                progress_info = {
+                    'explored_count': explored_count,
+                    'current_moves': current_state.g_cost,
+                    'estimated_remaining': current_state.h_cost,
+                    'memory_usage': len(closed_set)
+                }
+                self.progress_callback(progress_info)
+            
+            if current_state.g_cost > closed_set.get(hash(current_state), float('inf')):
+                continue
+                
+            if self.puzzle.is_goal(current_state.board):
+                path_states = []
+                temp_state = current_state
+                while temp_state:
+                    path_states.append(temp_state)
+                    temp_state = temp_state.parent
+                
+                if self.progress_callback:
+                    final_info = {
+                        'solved': True,
+                        'total_explored': explored_count,
+                        'final_moves': len(path_states) - 1,
+                        'memory_efficient': True
+                    }
+                    self.progress_callback(final_info)
+                    
+                return path_states[::-1]
+                
+            for next_board, move_description in self.puzzle.get_all_possible_moves(current_state.board):
+                next_g_cost = current_state.g_cost + 1
+                next_state = State(next_board, next_g_cost, self.puzzle, current_state, move_description)
+                next_hash = hash(next_state)
+                
+                if next_hash in closed_set and next_g_cost >= closed_set[next_hash]:
+                    continue
+                    
+                closed_set[next_hash] = next_g_cost
+                heapq.heappush(open_set, (next_state.f_cost, next_state))
+        
+        # 探索制限に達した場合
+        if self.progress_callback:
+            final_info = {
+                'solved': False,
+                'total_explored': explored_count,
+                'limit_reached': explored_count >= max_explored,
+                'memory_limited': True
             }
             self.progress_callback(final_info)
             
